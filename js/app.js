@@ -1,6 +1,8 @@
 import * as C from "./content.js";
+import * as W1 from "./worlds/w1.js";
+import * as W2 from "./worlds/w2.js";
 import {
-  loadProgress, saveProgress, clearProgress, DEFAULT_PROGRESS,
+  loadProgress, saveProgress, clearProgress, DEFAULT_PROGRESS, freshWorld,
   esc, shuffle, pick, speak, stopSpeech, canSpeak, boldMarks, plainStory, tokens,
 } from "./util.js";
 
@@ -18,6 +20,27 @@ const S = {
   resetArm: false,
   doneInfo: null,
 };
+// ---------- Worlds: content per world ----------
+const WORLD_DATA = {
+  1: W1,
+  2: W2,
+  3: {
+    WORDS: C.WORDS, STORY: { ...C.STORY, img: "vocab/get_up.webp" }, PAIRS: C.PAIRS, PRACTICE: C.PRACTICE, ROUNDS: C.ROUNDS, CHECK: C.CHECK,
+    META: {
+      bg: "world/bg_world3_myday.webp",
+      groups: ["s", "have", "do"],
+      wordsDone: { en: "You know 8 daily-routine words now. They are in your Word Bag!", id: "Sekarang kamu tahu 8 kata kegiatan sehari-hari. Semuanya ada di kantong katamu!" },
+      verbPrompt: { en: "Now tap the <b class='c-verb'>verb</b>: what does the subject <b>do</b>?", id: "Sekarang ketuk <b>kata kerja</b>: apa yang dilakukan?" },
+      practiceGuide: { en: "First find the subject. Then choose the verb.", id: "Cari subjeknya dulu. Lalu pilih kata kerjanya." },
+    },
+  },
+};
+S.world = WORLD_DATA[S.p.world] ? S.p.world : 3;
+const D = () => WORLD_DATA[S.world];
+const PW = () => S.p.worlds[S.world] || (S.p.worlds[S.world] = freshWorld());
+const stageImg = (st) => (D().META.stageImg && D().META.stageImg[st.id]) || st.img;
+const worldDoneCount = (n) => { const w = S.p.worlds[n]; return w ? C.STAGES.filter((s) => s.id !== "result" && w.done[s.id]).length : 0; };
+
 let lastKey = "";
 let lastItemKey = "";
 
@@ -53,12 +76,12 @@ const Te = (o, cls) => T(esc(o.en), esc(o.id), cls);
 
 function isOpen(id) {
   if (S.p.unlockAll) return true;
-  if (id === "result") return !!S.p.done.check;
+  if (id === "result") return !!PW().done.check;
   const i = C.STAGES.findIndex((s) => s.id === id);
-  return i === 0 || !!S.p.done[C.STAGES[i - 1].id];
+  return i === 0 || !!PW().done[C.STAGES[i - 1].id];
 }
 function currentStageId() {
-  const s = C.STAGES.find((st) => st.id !== "result" && !S.p.done[st.id]);
+  const s = C.STAGES.find((st) => st.id !== "result" && !PW().done[st.id]);
   return s ? s.id : "result";
 }
 function addToBag(word, meaning, img) {
@@ -120,10 +143,10 @@ function guide(mood, en, id, who) {
 function stageHead(st, done, total) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return `<header class="stage-head">
-    <div class="stage-head-bg" style="background-image:url('${A("world/bg_world3_myday.webp")}')"></div>
+    <div class="stage-head-bg" style="background-image:url('${A(D().META.bg)}')"></div>
     <button class="round-btn" data-act="toWorlds" aria-label="Back to the map">${ic("back")}</button>
     <div class="stage-title">
-      <div class="stage-num">World 3 · Lesson ${st.n}</div>
+      <div class="stage-num">World ${S.world} · Lesson ${st.n}</div>
       <div class="stage-name">${esc(st.name.en)}</div>
     </div>
     <button class="pill ${S.p.showID ? "on" : ""}" data-act="toggleID" aria-pressed="${S.p.showID}">ID</button>
@@ -141,7 +164,7 @@ const nextIc = () => ic("next", "ic-btn");
 // Home (title screen)
 // ------------------------------------------------------------------
 function viewHome() {
-  const started = Object.keys(S.p.done).length > 0;
+  const started = Object.values(S.p.worlds).some((w) => Object.keys(w.done).length > 0);
   return `<div class="home">
     <div class="home-bg" style="background-image:url('${A("world/title_background.webp")}')"></div>
     <div class="home-top">
@@ -175,24 +198,34 @@ function topBar(title, sub, backAct, backLabel) {
 function viewWorlds() {
   const cur = currentStageId();
   const lessonIds = C.STAGES.filter((s) => s.id !== "result").map((s) => s.id);
-  const w3 = C.MAP_STONES.filter((s) => s.w === 3);
-  let walkerAt = w3[Math.max(0, lessonIds.indexOf(cur))] || w3[w3.length - 1];
+  const stonesOf = (n) => C.MAP_STONES.filter((s) => s.w === n);
+  const mine = stonesOf(S.world);
+  const lessonMode = (n) => n === S.world && stonesOf(n).length >= lessonIds.length;
+  const progStone = (n) => Math.round((worldDoneCount(n) / lessonIds.length) * stonesOf(n).length);
+  let walkerAt = lessonMode(S.world) ? mine[Math.max(0, lessonIds.indexOf(cur))] || mine[mine.length - 1]
+    : mine[Math.min(mine.length - 1, progStone(S.world))];
   const firstOf = {};
   C.MAP_STONES.forEach((s, i) => { if (firstOf[s.w] == null) firstOf[s.w] = i; });
 
-  let k3 = 0;
-  const stones = C.MAP_STONES.map((s, i) => {
+  const count = {};
+  const stones = C.MAP_STONES.map((s) => {
     const style = `left:${s.x}%;top:${s.y}%;--s:${s.s}`;
-    if (s.w === 3) {
-      const id = lessonIds[k3++];
+    const k = (count[s.w] = (count[s.w] ?? -1) + 1);
+    const wd = C.WORLDS[s.w - 1];
+    if (!wd.open || !WORLD_DATA[s.w]) return `<button class="stone future" style="${style}" data-act="worldInfo" data-n="${s.w}" aria-label="World ${s.w} (coming soon)">${ic("lock")}</button>`;
+    if (lessonMode(s.w)) {
+      const id = lessonIds[k];
+      if (!id) return "";
       const st = stageById(id);
-      const done = !!S.p.done[id];
+      const done = !!PW().done[id];
       const open = isOpen(id);
       const state = done ? "done" : id === cur ? "current" : open ? "open" : "locked";
       return `<button class="stone lesson ${state}" style="${style}" data-act="${open ? "openStage" : "locked"}" data-id="${id}" aria-label="Lesson ${st.n}: ${esc(st.name.en)}">
         <span>${done ? ic("check") : st.n}</span></button>`;
     }
-    return `<button class="stone future" style="${style}" data-act="worldInfo" data-n="${s.w}" aria-label="World ${s.w} (coming soon)">${ic("lock")}</button>`;
+    const filled = k < progStone(s.w);
+    return `<button class="stone lesson ${filled ? "done" : "open"}" style="${style}" data-act="openWorld" data-n="${s.w}" aria-label="World ${s.w}: ${esc(wd.name)}">
+      <span>${filled ? ic("check") : ""}</span></button>`;
   }).join("");
 
   const flags = C.WORLDS.map((w) => {
@@ -224,13 +257,13 @@ function viewWorlds() {
       <button class="round-btn" data-act="openSheet" data-sheet="worlds" aria-label="All worlds">${ic("map")}</button>
     </div>
     <section class="hud hud-card">
-      <img class="hc-img" src="${A(curSt.img)}" alt="">
+      <img class="hc-img" src="${A(stageImg(curSt))}" alt="">
       <div class="hc-body">
-        <div class="hc-k">World 3 · My Day · ${allDone ? "All lessons done" : `Lesson ${curSt.n} of 6`}</div>
+        <div class="hc-k">World ${S.world} · ${esc(C.WORLDS[S.world - 1].short)} · ${allDone ? "All lessons done" : `Lesson ${curSt.n} of 6`}</div>
         <div class="hc-n">${allDone ? T("Great job, explorer!", "Hebat, penjelajah!") : Te(curSt.name)}</div>
         <div class="hc-row">
-          <button class="btn small ${allDone ? "btn-sun" : ""}" data-act="openStage" data-id="${cur}">${allDone ? "My results" : S.p.done[lessonIds[0]] ? "Continue" : "Start"} ${ic("next", "ic-btn")}</button>
-          <button class="btn small ghost" data-act="openWorld">${T("Lessons", "Pelajaran")}</button>
+          <button class="btn small ${allDone ? "btn-sun" : ""}" data-act="openStage" data-id="${cur}">${allDone ? "My results" : PW().done[lessonIds[0]] ? "Continue" : "Start"} ${ic("next", "ic-btn")}</button>
+          <button class="btn small ghost" data-act="openWorld" data-n="${S.world}">${T("Lessons", "Pelajaran")}</button>
         </div>
       </div>
     </section>
@@ -242,15 +275,15 @@ function viewWorlds() {
 // ------------------------------------------------------------------
 function viewWorld() {
   const cur = currentStageId();
-  const w = C.WORLDS[2];
+  const w = C.WORLDS[S.world - 1];
   const nodes = C.STAGES.map((st, k) => {
-    const done = st.id === "result" ? !!S.p.last : !!S.p.done[st.id];
+    const done = st.id === "result" ? !!PW().last : !!PW().done[st.id];
     const open = isOpen(st.id);
     const state = done ? "done" : open ? "open" : "locked";
     const isCur = st.id === cur;
     return `<div class="lnode ${state} ${isCur ? "current" : ""} ${k % 2 ? "right" : "left"}">
       <button class="lbtn" data-act="${open ? "openStage" : "locked"}" data-id="${st.id}" aria-label="Lesson ${st.n}: ${esc(st.name.en)}${open ? "" : " (locked)"}">
-        <img src="${A(st.img)}" alt="">
+        <img src="${A(stageImg(st))}" alt="">
         <span class="lbadge">${done ? ic("check") : open ? st.n : ic("lock")}</span>
       </button>
       <div class="ltext">
@@ -261,10 +294,10 @@ function viewWorld() {
       </div>
     </div>`;
   }).join("");
-  const doneCount = C.STAGES.filter((s) => s.id !== "result" && S.p.done[s.id]).length;
+  const doneCount = C.STAGES.filter((s) => s.id !== "result" && PW().done[s.id]).length;
   return `<div class="world">
     <header class="world-head">
-      <div class="world-head-bg" style="background-image:url('${A("world/bg_world3_myday.webp")}')"></div>
+      <div class="world-head-bg" style="background-image:url('${A(D().META.bg)}')"></div>
       <div class="world-head-row">
         <button class="round-btn" data-act="toWorlds" aria-label="Adventure map">${ic("map")}</button>
         <span class="ribbon">World ${w.n}</span>
@@ -273,13 +306,13 @@ function viewWorld() {
       <h1 class="world-title">${esc(w.name)}</h1>
       <p class="world-sub">${T(esc(w.topic.en), esc(w.topic.id))}</p>
       <div class="world-prog"><i style="width:${(doneCount / 6) * 100}%"></i></div>
-      <div class="world-prog-t">${doneCount}/6 ${T("lessons done", "pelajaran selesai")}${S.p.best != null ? ` · ${T(`Best check ${S.p.best}/10`, "Skor cek terbaik")}` : ""}</div>
+      <div class="world-prog-t">${doneCount}/6 ${T("lessons done", "pelajaran selesai")}${PW().best != null ? ` · ${T(`Best check ${PW().best}/10`, "Skor cek terbaik")}` : ""}</div>
     </header>
     <div class="lpath">${pathSvg(C.STAGES.length)}${nodes}</div>
     <div class="map-tools">
       <button class="chip" data-act="openBag">${ic("bag")} ${T(`My Word Bag (${Object.keys(S.p.bag).length})`, "Kantong kataku")}</button>
       <button class="chip" data-act="openSheet" data-sheet="rules">${ic("bulb")} ${T("Pattern card", "Kartu pola")}</button>
-      ${S.p.done.rounds || S.p.unlockAll ? `<button class="chip" data-act="openStage" data-id="rounds">${ic("star")} ${T("Play the rounds again", "Main ronde lagi")}</button>` : ""}
+      ${PW().done.rounds || S.p.unlockAll ? `<button class="chip" data-act="openStage" data-id="rounds">${ic("star")} ${T("Play the rounds again", "Main ronde lagi")}</button>` : ""}
     </div>
   </div>`;
 }
@@ -374,22 +407,62 @@ function viewSheet() {
   </div>`;
 }
 
-function patternCard() {
+function patternCard() { return S.world === 1 ? patternCardBe() : S.world === 2 ? patternCardThere() : patternCardS(); }
+function patternCardThere() {
+  return `<div class="pattern">
+    <div class="pcol">
+      <div class="phead">one thing<small>${S.p.showID ? "satu benda" : "a board, a library"}</small></div>
+      <div class="pv">There i<b>s</b></div>
+      <div class="pv">There isn't</div>
+      <div class="pv">I<b>s</b> there …?</div>
+    </div>
+    <div class="pcol alt">
+      <div class="phead">many things<small>${S.p.showID ? "banyak benda" : "two desks, four windows"}</small></div>
+      <div class="pv">There a<b>re</b></div>
+      <div class="pv">There aren't</div>
+      <div class="pv">A<b>re</b> there …?</div>
+    </div>
+  </div>
+  <div class="pattern-note">${T("<i>There <b>is</b> a big board. · There <b>are</b> twenty desks.</i><br>Look at the thing after is / are: one or many?", "Lihat benda setelah is / are: satu atau banyak?")}</div>`;
+}
+function patternCardBe() {
+  return `<div class="pattern three">
+    <div class="pcol">
+      <div class="phead">I<small>${S.p.showID ? "aku" : "me"}</small></div>
+      <div class="pv">a<b>m</b></div>
+      <div class="pv">am not</div>
+    </div>
+    <div class="pcol alt">
+      <div class="phead">he · she · it<small>${S.p.showID ? "satu orang / benda" : "one person or thing"}</small></div>
+      <div class="pv">i<b>s</b></div>
+      <div class="pv">isn't</div>
+    </div>
+    <div class="pcol">
+      <div class="phead">you · we · they<small>${S.p.showID ? "kamu, kami, mereka" : "two or more"}</small></div>
+      <div class="pv">a<b>re</b></div>
+      <div class="pv">aren't</div>
+    </div>
+  </div>
+  <div class="pattern-note">${T("<i>I <b>am</b> Sari. · Rudi <b>is</b> twelve. · Rudi and I <b>are</b> friends.</i><br>Questions: <b>Is</b> he …? · <b>Are</b> you …?", "Pertanyaan: am / is / are pindah ke depan.")}</div>`;
+}
+function patternCardS() {
   return `<div class="pattern">
     <div class="pcol">
       <div class="phead">I · you · we · they<small>${S.p.showID ? "dan 2 orang atau lebih" : "and two or more"}</small></div>
       <div class="pv">get · read · play</div>
+      <div class="pv">go · watch · brush</div>
       <div class="pv">have</div>
       <div class="pv">do · don't</div>
     </div>
     <div class="pcol alt">
       <div class="phead">he · she · it<small>${S.p.showID ? "Rudi, Ibu, kucing (satu)" : "Rudi, Mother, the cat"}</small></div>
       <div class="pv">get<b>s</b> · read<b>s</b> · play<b>s</b></div>
+      <div class="pv">go<b>es</b> · watch<b>es</b> · brush<b>es</b></div>
       <div class="pv">ha<b>s</b></div>
       <div class="pv">doe<b>s</b> · doe<b>s</b>n't</div>
     </div>
   </div>
-  <div class="pattern-note">${T("After <b>do / does / don't / doesn't</b> → no -s: <i>Does Rudi <b>like</b> milk?</i>", "Setelah do / does / don't / doesn't → kata kerja tanpa -s.")}</div>`;
+  <div class="pattern-note">${T("<b>+es</b> after o, ch, sh, s, x: go<b>es</b>, watch<b>es</b>, brush<b>es</b>.<br>After <b>do / does / don't / doesn't</b> → no <span class='nw'>-s/-es</span>: <i>Does Rudi <b>like</b> milk?</i>", "+es setelah huruf o, ch, sh, s, x. Setelah do / does / don't / doesn't → kata kerja tanpa -s/-es.")}</div>`;
 }
 
 function viewTip() {
@@ -432,7 +505,7 @@ function initRun(id, prevRound) {
     case "words": return { phase: "learn", i: 0 };
     case "read": return { phase: "read", playing: false };
     case "pairs": return { phase: "play", i: 0, step: "subj", bad: null };
-    case "practice": return newQuiz(C.PRACTICE, { phase: "play" });
+    case "practice": return newQuiz(D().PRACTICE, { phase: "play" });
     case "rounds": return { phase: "intro", round: prevRound || 1 };
     case "check": return { phase: "intro" };
   }
@@ -448,7 +521,7 @@ function newQuiz(items, extra = {}) {
 }
 
 function finishStage(id, en, id2) {
-  S.p.done[id] = true; save();
+  PW().done[id] = true; save();
   S.screen = "done";
   S.doneInfo = { id, en, id2 };
   stopSpeech();
@@ -461,7 +534,7 @@ function viewDone() {
   const nextId = currentStageId();
   const next = stageById(nextId);
   return `<div class="done-screen">
-    <div class="done-bg" style="background-image:url('${A("world/bg_world3_myday.webp")}')"></div>
+    <div class="done-bg" style="background-image:url('${A(D().META.bg)}')"></div>
     <div class="done-card">
       <img class="done-book" src="${A("brand/glowing_book.webp")}" alt="">
       <div class="done-cast">
@@ -488,12 +561,12 @@ function viewWords() {
   const st = stageById("words");
   const r = S.run;
   if (r.phase === "learn") {
-    const w = C.WORDS[r.i];
-    return `${stageHead(st, r.i + 1, C.WORDS.length * 2)}
+    const w = D().WORDS[r.i];
+    return `${stageHead(st, r.i + 1, D().WORDS.length * 2)}
     <main class="body">
       ${guide("idle", "Look, listen, and say the words.", "Lihat, dengarkan, dan ucapkan.")}
       <div class="word-card item">
-        <div class="wc-count">${r.i + 1} / ${C.WORDS.length}</div>
+        <div class="wc-count">${r.i + 1} / ${D().WORDS.length}</div>
         <img class="wc-img" src="${A(w.img)}" alt="${esc(w.phrase)}">
         <div class="wc-phrase">${esc(w.phrase)} ${speakerBtn(w.phrase)}</div>
         ${S.p.showID ? `<div class="wc-mean">${esc(w.meaning)}</div>` : `<button class="link" data-act="toggleID">Show meaning</button>`}
@@ -501,13 +574,13 @@ function viewWords() {
       </div>
       <div class="nav">
         <button class="btn ghost" data-act="wordsPrev" ${r.i === 0 ? "disabled" : ""}>${ic("back", "ic-btn")} Back</button>
-        <button class="btn" data-act="wordsNext">${r.i === C.WORDS.length - 1 ? "Play Picture Match" : "Next"} ${nextIc()}</button>
+        <button class="btn" data-act="wordsNext">${r.i === D().WORDS.length - 1 ? "Play Picture Match" : "Next"} ${nextIc()}</button>
       </div>
     </main>`;
   }
-  const w = C.WORDS.find((x) => x.key === r.order[r.i]);
+  const w = D().WORDS.find((x) => x.key === r.order[r.i]);
   const opts = r.opts.map((k) => {
-    const ww = C.WORDS.find((x) => x.key === k);
+    const ww = D().WORDS.find((x) => x.key === k);
     const cls = r.state === "right" && k === w.key ? "right" : r.wrong.includes(k) ? "wrong" : "";
     return `<button class="opt ${cls}" data-act="wordPick" data-k="${k}" ${r.state === "right" || r.wrong.includes(k) ? "disabled" : ""}>${esc(ww.phrase)}</button>`;
   }).join("");
@@ -515,7 +588,7 @@ function viewWords() {
   const g = r.state === "right" ? guide("ok", esc(p.en), esc(p.id))
     : r.state === "wrong" ? guide("no", "Not that one. Look at the picture again.", "Bukan itu. Lihat gambarnya lagi.")
     : guide("think", "Which words match the picture?", "Kata mana yang cocok dengan gambar?");
-  return `${stageHead(st, C.WORDS.length + r.i + (r.state === "right" ? 1 : 0), C.WORDS.length * 2)}
+  return `${stageHead(st, D().WORDS.length + r.i + (r.state === "right" ? 1 : 0), D().WORDS.length * 2)}
   <main class="body">
     ${g}
     <div class="match item">
@@ -527,11 +600,11 @@ function viewWords() {
   </main>`;
 }
 function startWordGame() {
-  const order = shuffle(C.WORDS.map((w) => w.key));
+  const order = shuffle(D().WORDS.map((w) => w.key));
   S.run = { phase: "game", order, i: 0, state: null, wrong: [], opts: makeWordOpts(order[0]) };
 }
 function makeWordOpts(key) {
-  const others = shuffle(C.WORDS.map((w) => w.key).filter((k) => k !== key)).slice(0, 2);
+  const others = shuffle(D().WORDS.map((w) => w.key).filter((k) => k !== key)).slice(0, 2);
   return shuffle([key, ...others]);
 }
 
@@ -552,16 +625,16 @@ function viewRead() {
       ${guide("idle", "Read the story. Tap a <u>dotted word</u> for help.", "Baca ceritanya. Ketuk kata bergaris titik untuk bantuan.")}
       <article class="story book item">
         <div class="story-top">
-          <h3>${ic("book")} ${esc(C.STORY.title)}</h3>
+          <h3>${ic("book")} ${esc(D().STORY.title)}</h3>
           ${canSpeak() && S.p.sound ? `<button class="btn small ${r.playing ? "ghost" : ""}" data-act="readAloud">${ic(r.playing ? "stop" : "play", "ic-btn")} ${r.playing ? "Stop" : "Listen"}</button>` : ""}
         </div>
-        <img class="story-img" src="${A("vocab/get_up.webp")}" alt="">
-        <p>${C.STORY.sentences.map(storyHTML).join(" ")}</p>
+        <img class="story-img" src="${A(D().STORY.img)}" alt="">
+        <p>${D().STORY.sentences.map(storyHTML).join(" ")}</p>
       </article>
       <div class="nav"><button class="btn" data-act="readDone">${T("I have read it", "Aku sudah membaca")} ${nextIc()}</button></div>
     </main>`;
   }
-  const q = C.STORY.questions[r.i];
+  const q = D().STORY.questions[r.i];
   const who = (k, name) => {
     const cls = r.state === "right" && k === q.a ? "right" : r.wrong.includes(k) ? "wrong" : "";
     return `<button class="who ${cls}" data-act="whoPick" data-k="${k}" ${r.state === "right" || r.wrong.includes(k) ? "disabled" : ""}>
@@ -571,13 +644,13 @@ function viewRead() {
   const g = r.state === "right" ? guide("ok", esc(p.en), esc(p.id))
     : r.state === "wrong" ? guide("no", "Look at the story again.", "Lihat ceritanya lagi.")
     : guide("think", "Who is it? Use the story.", "Siapa? Gunakan ceritanya.");
-  return `${stageHead(st, r.i + (r.state === "right" ? 1 : 0), C.STORY.questions.length)}
+  return `${stageHead(st, r.i + (r.state === "right" ? 1 : 0), D().STORY.questions.length)}
   <main class="body">
     ${g}
     <div class="q item"><div class="q-t">${esc(q.q)} ${speakerBtn(q.q)}</div>${S.p.showID ? `<div class="q-id">${esc(q.qid)}</div>` : ""}</div>
-    <div class="whos">${who("sari", "Sari")}${who("rudi", "Rudi")}</div>
-    <details class="peek"><summary>${T("Look at the story", "Lihat cerita")}</summary><p>${C.STORY.sentences.map((s) => esc(plainStory(s))).join(" ")}</p></details>
-    ${r.state === "right" ? `<div class="nav"><button class="btn" data-act="whoNext">${r.i === C.STORY.questions.length - 1 ? "Finish" : "Next"} ${nextIc()}</button></div>` : ""}
+    <div class="whos">${(D().STORY.who || ["sari", "rudi"]).map((k) => who(k, k[0].toUpperCase() + k.slice(1))).join("")}</div>
+    <details class="peek"><summary>${T("Look at the story", "Lihat cerita")}</summary><p>${D().STORY.sentences.map((s) => esc(plainStory(s))).join(" ")}</p></details>
+    ${r.state === "right" ? `<div class="nav"><button class="btn" data-act="whoNext">${r.i === D().STORY.questions.length - 1 ? "Finish" : "Next"} ${nextIc()}</button></div>` : ""}
   </main>`;
 }
 
@@ -588,14 +661,14 @@ function viewPairs() {
   const st = stageById("pairs");
   const r = S.run;
   if (r.phase === "card") {
-    return `${stageHead(st, C.PAIRS.length, C.PAIRS.length)}
+    return `${stageHead(st, D().PAIRS.length, D().PAIRS.length)}
     <main class="body">
       ${guide("happy", "You found the pattern! Read the card.", "Kamu menemukan polanya! Baca kartunya.")}
       <div class="card item">${patternCard()}</div>
       <div class="nav"><button class="btn" data-act="pairsFinish">${T("Got it!", "Paham!")}</button></div>
     </main>`;
   }
-  const p = C.PAIRS[r.i];
+  const p = D().PAIRS[r.i];
   const tk = tokens(p.t);
   const doneStep = r.step === "done";
   const toks = tk.map((w, k) => {
@@ -605,22 +678,25 @@ function viewPairs() {
     if (r.bad === k) cls += " bad shake";
     return `<button class="tok ${cls}" data-act="pairTap" data-k="${k}" ${doneStep ? "disabled" : ""}>${esc(w)}</button>`;
   }).join(" ");
+  const M = D().META;
+  const mt = (k, en, id) => M[k] || { en, id };
+  const bad = r.step === "subj" ? mt("badSubj", "That is not the subject. <b>Who</b> does it?", "Itu bukan subjek. <b>Siapa</b> yang melakukan?")
+    : mt("badVerb", "That is not the verb. What does the subject <b>do</b>?", "Itu bukan kata kerja. Apa yang <b>dilakukan</b>?");
+  const sp = mt("subjPrompt", "Tap the <b class='c-subj'>subject</b>: <b>who</b>?", "Ketuk <b>subjek</b>: <b>siapa</b>?");
   const g = doneStep ? guide("ok", `<b>${esc(p.note.en)}</b>`, esc(p.note.id))
-    : r.bad != null ? guide("no",
-        r.step === "subj" ? "That is not the subject. <b>Who</b> does it?" : "That is not the verb. What does the subject <b>do</b>?",
-        r.step === "subj" ? "Itu bukan subjek. <b>Siapa</b> yang melakukan?" : "Itu bukan kata kerja. Apa yang <b>dilakukan</b>?")
-    : r.step === "subj" ? guide("think", "Tap the <b class='c-subj'>subject</b>: <b>who</b>?", "Ketuk <b>subjek</b>: <b>siapa</b>?")
-    : guide("think", "Now tap the <b class='c-verb'>verb</b>: what does the subject <b>do</b>?", "Sekarang ketuk <b>kata kerja</b>: apa yang dilakukan?");
-  const join = (idx) => esc(tk.filter((_, k) => idx.includes(k)).join(" "));
-  return `${stageHead(st, r.i + (doneStep ? 1 : 0), C.PAIRS.length)}
+    : r.bad != null ? guide("no", bad.en, bad.id)
+    : r.step === "subj" ? guide("think", sp.en, sp.id)
+    : guide("think", M.verbPrompt.en, M.verbPrompt.id);
+  const join = (idx) => esc(tk.filter((_, k) => idx.includes(k)).join(" ").replace(/[.,!?]+$/, ""));
+  return `${stageHead(st, r.i + (doneStep ? 1 : 0), D().PAIRS.length)}
   <main class="body">
     ${g}
     <div class="sentence-card item">
-      <div class="wc-count">${r.i + 1} / ${C.PAIRS.length}</div>
+      <div class="wc-count">${r.i + 1} / ${D().PAIRS.length}</div>
       <div class="toks">${toks}</div>
       ${doneStep ? `<div class="pair-chip pop"><span class="c-subj">${join(p.subj)}</span> → <span class="c-verb">${join(p.verb)}</span> ${speakerBtn(p.t)}</div>` : ""}
     </div>
-    <div class="legend"><span class="c-subj">■ subject</span><span class="c-verb">■ verb</span></div>
+    <div class="legend"><span class="c-subj">■ ${esc((D().META.legend || ["subject"])[0])}</span><span class="c-verb">■ ${esc((D().META.legend || [, "verb"])[1])}</span></div>
     ${doneStep ? `<div class="nav"><button class="btn" data-act="pairsNext">Next ${nextIc()}</button></div>` : ""}
   </main>`;
 }
@@ -643,10 +719,17 @@ function optionsHTML(r, it, act = "pick") {
     return `<button class="opt ${isRight ? "right" : ""} ${isWrong ? "wrong" : ""}" data-act="${act}" data-v="${esc(v)}" ${r.state === "right" || isWrong ? "disabled" : ""}>${esc(v)}</button>`;
   }).join("")}</div>`;
 }
+// Item hint: names the subject, then the short rule ("Rudi = he → verb + s/es").
+function subjHint(it) {
+  const s = C.SHORT[it.r];
+  if (!s) return { en: "", id: "" };
+  const w = it.who ? `<b>${esc(it.who)}</b> → ` : "";
+  return { en: w + esc(s.en), id: w + esc(s.id) };
+}
 function feedbackGuide(r, it) {
   const rule = C.RULES[it.r];
   if (r.state === "right") { const p = pick(C.PRAISE); return guide("ok", `<b>${esc(p.en)}</b> ${esc(rule.en)}`, `${esc(p.id)} ${esc(rule.id)}`); }
-  if (r.state === "wrong") { const p = pick(C.TRY_AGAIN); return guide("no", `<b>${esc(p.en)}</b>`, esc(p.id)); }
+  if (r.state === "wrong") { const p = pick(C.TRY_AGAIN), h = subjHint(it); return guide("no", `<b>${esc(p.en)}</b><br>${h.en}`, `${esc(p.id)}`); }
   return null;
 }
 
@@ -658,7 +741,8 @@ function viewPractice() {
   const r = S.run;
   const it = r.items[r.i];
   const group = C.GROUP_OF[it.r];
-  const g = feedbackGuide(r, it) || guide("think", "Choose the verb that matches the subject.", "Pilih kata kerja yang cocok dengan subjeknya.");
+  const g = feedbackGuide(r, it) || guide("think", D().META.practiceGuide.en, D().META.practiceGuide.id);
+  const h = subjHint(it);
   return `${stageHead(st, r.i + (r.state === "right" ? 1 : 0), r.items.length)}
   <main class="body">
     ${g}
@@ -668,7 +752,7 @@ function viewPractice() {
       ${r.state === "right" ? speakerBtn(solvedText(it)) : ""}
     </div>
     ${optionsHTML(r, it)}
-    ${r.state !== "right" ? `<button class="hint-btn ${r.hint ? "open" : ""}" data-act="hint"><span class="hint-ic">${ic("bulb")}</span> ${r.hint ? T(esc(C.HINTS[group].en), esc(C.HINTS[group].id)) : T("Need a hint?", "Butuh petunjuk?")}</button>` : ""}
+    ${r.state !== "right" ? `<button class="hint-btn ${r.hint ? "open" : ""}" data-act="hint"><span class="hint-ic">${ic("bulb")}</span> ${r.hint ? `<span>${h.en}</span>` : T("Need a hint?", "Butuh petunjuk?")}</button>` : ""}
     ${r.state === "right" ? `<div class="nav"><button class="btn" data-act="quizNext">${r.i === r.items.length - 1 ? "Finish" : "Next"} ${nextIc()}</button></div>` : ""}
   </main>`;
 }
@@ -676,17 +760,17 @@ function viewPractice() {
 // ------------------------------------------------------------------
 // Lesson 5: Game rounds
 // ------------------------------------------------------------------
-const roundDef = (n) => C.ROUNDS[n - 1];
+const roundDef = (n) => D().ROUNDS[n - 1];
 function startRound(n) {
   const def = roundDef(n);
-  const v = def.variants[(S.p.plays[n] || 0) % def.variants.length];
+  const v = def.variants[(PW().plays[n] || 0) % def.variants.length];
   S.run = newQuiz(v.items.map((x) => ({ ...x, kind: def.kind })), { phase: "play", round: n, title: v.title, results: [] });
 }
 function viewRounds() {
   const st = stageById("rounds");
   const r = S.run;
   const def = roundDef(r.round);
-  const dots = `<div class="round-dots">${C.ROUNDS.map((d) => `<span class="${d.n < r.round ? "past" : d.n === r.round ? "cur" : ""}">${d.n}</span>`).join("")}</div>`;
+  const dots = `<div class="round-dots">${D().ROUNDS.map((d) => `<span class="${d.n < r.round ? "past" : d.n === r.round ? "cur" : ""}">${d.n}</span>`).join("")}</div>`;
   if (r.phase === "intro") {
     return `${stageHead(st, 0, 0)}
     <main class="body center">
@@ -772,7 +856,7 @@ function viewCheck() {
     return `${stageHead(st, 0, 0)}
     <main class="body center">
       <div class="round-intro item">
-        <div class="ri-k">${esc(C.CHECK.title)}</div>
+        <div class="ri-k">${esc(D().CHECK.title)}</div>
         <h2>${T("My check", "Cek mandiri")}</h2>
         <ul class="rules-list">
           <li>${T("10 sentences from a new story.", "10 kalimat dari cerita baru.")}</li>
@@ -798,7 +882,7 @@ function viewCheck() {
   <main class="body">
     <div class="check-k">${T(`Sentence ${r.i + 1} of ${r.items.length}`, "Kalimat")}</div>
     <article class="story mini item">
-      <div class="story-top"><h3>${esc(C.CHECK.title)}</h3><span class="tag-r">No hints</span></div>
+      <div class="story-top"><h3>${esc(D().CHECK.title)}</h3><span class="tag-r">No hints</span></div>
       <p>${story}</p>
     </article>
     ${opts}
@@ -828,7 +912,7 @@ function learnerText(it, ans = {}) {
   return tokens(it.t).map((w, k) => (k === ans.tapped && ans.picked != null ? ans.picked : w)).join(" ");
 }
 function scoreCheck(r) {
-  const groups = { s: [0, 0], have: [0, 0], do: [0, 0] };
+  const groups = Object.fromEntries(D().META.groups.map((g) => [g, [0, 0]]));
   const missed = [];
   let score = 0;
   r.items.forEach((it, j) => {
@@ -845,8 +929,8 @@ function scoreCheck(r) {
 // Result
 // ------------------------------------------------------------------
 function viewResult() {
-  const L = S.p.last;
-  if (!L) return `<div class="body center"><p>${T("Finish the check first.", "Selesaikan cek dulu.")}</p><button class="btn" data-act="toWorld">World 3</button></div>`;
+  const L = PW().last;
+  if (!L) return `<div class="body center"><p>${T("Finish the check first.", "Selesaikan cek dulu.")}</p><button class="btn" data-act="toWorld">World ${S.world}</button></div>`;
   const label = L.score >= 8 ? { k: "ready", en: "Ready!", id: "Siap!", m: "You can match verbs with their subjects. Great job!", mid: "Kamu bisa mencocokkan kata kerja dengan subjeknya. Hebat!", img: "sari_cheer" }
     : L.score >= 6 ? { k: "almost", en: "Almost there!", id: "Hampir!", m: "Play the rounds once more, then try the check again.", mid: "Main ronde sekali lagi, lalu coba cek lagi.", img: "sari_thumbsup" }
     : { k: "notyet", en: "Not yet", id: "Belum", m: "That's OK! Practise the rounds and use the pattern card.", mid: "Tidak apa-apa! Latihan ronde dan pakai kartu pola.", img: "sari_encourage" };
@@ -859,7 +943,7 @@ function viewResult() {
     <li><div class="yours">✗ ${esc(m.yours)}</div><div class="right-s">✓ ${esc(m.correct)}</div><div class="why">${T(esc(C.RULES[m.r].en), esc(C.RULES[m.r].id))}</div></li>`).join("")
     : `<li class="none">${T("No mistakes. Amazing!", "Tidak ada kesalahan. Luar biasa!")}</li>`;
   return `<div class="result">
-    ${topBar(esc(C.CHECK.title), "My results", "toWorlds", "Map")}
+    ${topBar(esc(D().CHECK.title), "My results", "toWorlds", "Map")}
     <main class="body">
       <div class="res-card ${label.k} item">
         <div class="res-ring">
@@ -872,7 +956,7 @@ function viewResult() {
         <img class="res-char pop" src="${A(`characters/${label.img}.webp`)}" alt="">
         <div class="res-label">${T(label.en, label.id)}</div>
         <p>${T(label.m, label.mid)}</p>
-        <div class="fine">${T(`Best score: ${S.p.best}/10 · Target: 8/10`, "Skor terbaik · Target 8/10")}</div>
+        <div class="fine">${T(`Best score: ${PW().best}/10 · Target: 8/10`, "Skor terbaik · Target 8/10")}</div>
       </div>
       <div class="card"><h4>${T("By pattern", "Per pola")}</h4>${bars}</div>
       <div class="card"><h4>${T("Look again", "Lihat lagi")}</h4><ul class="review">${review}</ul></div>
@@ -919,7 +1003,7 @@ const act = {
   toHome() { stopSpeech(); S.screen = "home"; render(); },
   toWorlds() { stopSpeech(); S.screen = "worlds"; S.stage = null; S.run = null; render(); },
   toWorld() { stopSpeech(); S.screen = "worlds"; S.stage = null; S.run = null; S.tip = null; render(); },
-  openWorld() { S.sheet = null; S.screen = "world"; render(); },
+  openWorld(d) { S.sheet = null; if (d && d.n && WORLD_DATA[+d.n]) { S.world = +d.n; S.p.world = S.world; save(); } S.screen = "world"; render(); },
   worldInfo(d) { S.sheet = `world:${d.n}`; render(); },
   openBag() { bagReturn = S.screen; S.screen = "bag"; render(); },
   bagBack() { S.screen = bagReturn === "bag" ? "worlds" : bagReturn; render(); },
@@ -941,17 +1025,17 @@ const act = {
   // Words
   wordsPrev() { S.run.i = Math.max(0, S.run.i - 1); render(); },
   wordsNext() {
-    const w = C.WORDS[S.run.i]; addToBag(w.phrase, w.meaning, w.img);
-    if (S.run.i < C.WORDS.length - 1) { S.run.i++; render(); sayIfOn(C.WORDS[S.run.i].phrase); } else { startWordGame(); render(); }
+    const w = D().WORDS[S.run.i]; addToBag(w.phrase, w.meaning, w.img);
+    if (S.run.i < D().WORDS.length - 1) { S.run.i++; render(); sayIfOn(D().WORDS[S.run.i].phrase); } else { startWordGame(); render(); }
   },
   wordPick(d) {
     const r = S.run; const key = r.order[r.i];
-    if (d.k === key) { r.state = "right"; render(); burst(8); sayIfOn(C.WORDS.find((w) => w.key === key).phrase); }
+    if (d.k === key) { r.state = "right"; render(); burst(8); sayIfOn(D().WORDS.find((w) => w.key === key).phrase); }
     else { r.wrong.push(d.k); r.state = "wrong"; render(); }
   },
   wordNext() {
     const r = S.run;
-    if (r.i >= r.order.length - 1) { finishStage("words", "You know 8 daily-routine words now. They are in your Word Bag!", "Sekarang kamu tahu 8 kata kegiatan sehari-hari. Semuanya ada di kantong katamu!"); return; }
+    if (r.i >= r.order.length - 1) { finishStage("words", D().META.wordsDone.en, D().META.wordsDone.id); return; }
     r.i++; r.state = null; r.wrong = []; r.opts = makeWordOpts(r.order[r.i]); render();
   },
 
@@ -960,25 +1044,25 @@ const act = {
     const r = S.run;
     if (r.playing) { stopSpeech(); r.playing = false; render(); return; }
     r.playing = true; render();
-    speak(C.STORY.sentences.map(plainStory), {
+    speak(D().STORY.sentences.map(plainStory), {
       onIndex: (i) => document.querySelectorAll(".sent").forEach((el) => el.classList.toggle("reading", +el.dataset.i === i)),
       onEnd: () => { if (S.run && S.stage === "read") { S.run.playing = false; render(); } },
     });
   },
   readDone() { stopSpeech(); S.tip = null; S.run = { phase: "quiz", i: 0, state: null, wrong: [] }; render(); },
   whoPick(d) {
-    const r = S.run; const q = C.STORY.questions[r.i];
+    const r = S.run; const q = D().STORY.questions[r.i];
     if (d.k === q.a) { r.state = "right"; render(); burst(8); } else { r.wrong.push(d.k); r.state = "wrong"; render(); }
   },
   whoNext() {
     const r = S.run;
-    if (r.i >= C.STORY.questions.length - 1) { finishStage("read", "You read the whole story and found who does what.", "Kamu membaca seluruh cerita dan menemukan siapa melakukan apa."); return; }
+    if (r.i >= D().STORY.questions.length - 1) { finishStage("read", "You read the whole story and found who does what.", "Kamu membaca seluruh cerita dan menemukan siapa melakukan apa."); return; }
     r.i++; r.state = null; r.wrong = []; render();
   },
 
   // Pairs
   pairTap(d) {
-    const r = S.run; const p = C.PAIRS[r.i]; const k = +d.k;
+    const r = S.run; const p = D().PAIRS[r.i]; const k = +d.k;
     if (r.step === "subj") { if (p.subj.includes(k)) { r.step = "verb"; r.bad = null; } else r.bad = k; }
     else if (r.step === "verb") {
       if (p.verb.includes(k)) { r.step = "done"; r.bad = null; render(); burst(6); sayIfOn(p.t); return; }
@@ -988,7 +1072,7 @@ const act = {
   },
   pairsNext() {
     const r = S.run;
-    if (r.i >= C.PAIRS.length - 1) { r.phase = "card"; render(); return; }
+    if (r.i >= D().PAIRS.length - 1) { r.phase = "card"; render(); return; }
     r.i++; r.step = "subj"; r.bad = null; render();
   },
   pairsFinish() { finishStage("pairs", "You can find the subject and its verb.", "Kamu bisa menemukan subjek dan kata kerjanya."); },
@@ -1014,7 +1098,7 @@ const act = {
     const r = S.run;
     if (r.i >= r.items.length - 1) {
       if (S.stage === "practice") { finishStage("practice", "You chose the right verbs. Next: the game rounds!", "Kamu memilih kata kerja yang benar. Berikutnya: ronde permainan!"); return; }
-      if (S.stage === "rounds") { S.p.plays[r.round] = (S.p.plays[r.round] || 0) + 1; save(); r.phase = "summary"; render(); if (r.results.every((x) => x.ok)) burst(16); return; }
+      if (S.stage === "rounds") { PW().plays[r.round] = (PW().plays[r.round] || 0) + 1; save(); r.phase = "summary"; render(); if (r.results.every((x) => x.ok)) burst(16); return; }
     }
     Object.assign(r, { i: r.i + 1, state: null, wrong: [], missed: false, hint: false, step: "find", msgWrongTap: false, badTap: null });
     render();
@@ -1030,16 +1114,16 @@ const act = {
   },
 
   // Check
-  checkStart() { S.run = { phase: "play", items: C.CHECK.items.map((x) => ({ ...x, o: shuffle(x.o) })), i: 0, answers: [] }; render(); },
+  checkStart() { S.run = { phase: "play", items: D().CHECK.items.map((x) => ({ ...x, o: shuffle(x.o) })), i: 0, answers: [] }; render(); },
   checkTap(d) { const r = S.run; const k = +d.k; const a = r.answers[r.i] || {}; r.answers[r.i] = { tapped: k, picked: a.tapped === k ? a.picked : null }; render(); },
   checkPick(d) { const r = S.run; r.answers[r.i] = { ...(r.answers[r.i] || {}), picked: d.v }; render(); },
   checkNext() {
     const r = S.run;
     if (r.i < r.items.length - 1) { r.i++; render(); return; }
     const res = scoreCheck(r);
-    S.p.last = res;
-    S.p.best = S.p.best == null ? res.score : Math.max(S.p.best, res.score);
-    S.p.done.check = true; save();
+    PW().last = res;
+    PW().best = PW().best == null ? res.score : Math.max(PW().best, res.score);
+    PW().done.check = true; save();
     S.screen = "result"; S.stage = null; S.run = null; render();
     if (res.score >= 8) burst(20);
   },

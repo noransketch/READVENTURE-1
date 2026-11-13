@@ -12,8 +12,10 @@ Petualangan membaca bahasa Inggris untuk siswa SD kelas 6. Siswa mulai dari seko
 | Bagian | Status |
 | --- | --- |
 | Layar judul, Adventure Map layar penuh (27 batu pijakan, 6 dunia), My Word Bag, pengaturan | Selesai |
-| **Dunia 3 · My Day** (7 pelajaran, sesuai desain Meeting 12) | Bisa dimainkan penuh |
-| Dunia 1, 2, 4, 5, 6 | Batu pijakannya terkunci ("Coming soon"), dibuka bertahap saat levelnya dibuat |
+| **Dunia 3 · My Day** (7 pelajaran, sesuai desain Meeting 12; has/have, do/does, -s/-es) | Bisa dimainkan penuh |
+| **Dunia 1 · Hello, This Is Me** (7 pelajaran yang sama; am/is/are) | Bisa dimainkan penuh |
+| **Dunia 2 · My School World** (7 pelajaran yang sama; There is / There are) | Bisa dimainkan penuh |
+| Dunia 4, 5, 6 | Terkunci ("Coming soon"), dibuka bertahap |
 
 Pelajaran di Dunia 3: Words → Read → Find the pairs → Practice → Game rounds (3 ronde) → My check (10 soal, target 8/10) → My results.
 
@@ -35,7 +37,7 @@ Menu pengaturan berisi baris bahasa Indonesia, suara, **Open all lessons (teache
 
 ## Mengubah isi
 
-Semua teks, soal, dan dunia ada di **`js/content.js`**:
+Isi Dunia 3 dan aturan bersama ada di **`js/content.js`**; isi Dunia 1 dan 2 ada di **`js/worlds/w1.js`** dan **`js/worlds/w2.js`**. Progres disimpan per dunia.
 
 - `WORDS`: kartu kosakata (gambar di `assets/vocab/`).
 - `STORY`: cerita tahap Read. Tulis `[kata|arti]` untuk kata yang bisa diketuk (masuk ke Word Bag).

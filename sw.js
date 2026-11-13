@@ -1,6 +1,6 @@
 // Offline support: cache the whole app on first visit, then serve from cache.
 // Change VERSION whenever you deploy new content so phones get the update.
-const VERSION = "readventure-v2";
+const VERSION = "readventure-v5-world2-pics";
 const FILES = [
   "./",
   "index.html",
@@ -9,6 +9,8 @@ const FILES = [
   "js/app.js",
   "js/content.js",
   "js/util.js",
+  "js/worlds/w1.js",
+  "js/worlds/w2.js",
   "assets/vocab/do_homework.webp",
   "assets/vocab/get_up.webp",
   "assets/vocab/go_to_school.webp",
@@ -17,6 +19,24 @@ const FILES = [
   "assets/vocab/play_with_friends.webp",
   "assets/vocab/read_book.webp",
   "assets/vocab/sleep.webp",
+  "assets/vocab/family.webp",
+  "assets/vocab/mother.webp",
+  "assets/vocab/father.webp",
+  "assets/vocab/brother.webp",
+  "assets/vocab/sister.webp",
+  "assets/vocab/grandmother.webp",
+  "assets/vocab/grandfather.webp",
+  "assets/vocab/friend.webp",
+  "assets/world/bg_world1_family.webp",
+  "assets/vocab/board.webp",
+  "assets/vocab/desk.webp",
+  "assets/vocab/notebook.webp",
+  "assets/vocab/eraser.webp",
+  "assets/vocab/ruler.webp",
+  "assets/vocab/chair.webp",
+  "assets/vocab/pencil_case.webp",
+  "assets/vocab/library.webp",
+  "assets/world/bg_world2_class.webp",
   "assets/brand/compass.webp",
   "assets/brand/glowing_book.webp",
   "assets/brand/logo.webp",

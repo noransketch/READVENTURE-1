@@ -2,8 +2,8 @@
 // Edit this file to change texts and items. No other file needs to change.
 //
 // Rule keys (used for feedback, hints, and the result breakdown):
-//   s3     he / she / it / one person  -> verb + s   (gets, reads)
-//   plural I / you / we / they / 2+    -> no -s      (get, read)
+//   s3     he / she / it / one person  -> verb + s/es (gets, reads, goes, watches)
+//   plural I / you / we / they / 2+    -> no -s/-es  (get, read, go, watch)
 //   has    he / she / it / one person  -> has
 //   have   I / you / we / they / 2+    -> have
 //   does   he / she / it / one person  -> does / doesn't
@@ -12,12 +12,12 @@
 
 export const RULES = {
   s3: {
-    en: "He, she, it, or one person → verb + s.",
-    id: "He, she, it, atau satu orang → kata kerja + s.",
+    en: "He, she, it, or one person → verb + s/es (gets, goes, watches).",
+    id: "He, she, it, atau satu orang → kata kerja + s/es (gets, goes, watches).",
   },
   plural: {
-    en: "I, you, we, they, or two or more people → no -s.",
-    id: "I, you, we, they, atau lebih dari satu → tanpa -s.",
+    en: "I, you, we, they, or two or more people → no -s/-es.",
+    id: "I, you, we, they, atau lebih dari satu → tanpa -s/-es.",
   },
   has: {
     en: "He, she, it, or one person → has.",
@@ -36,32 +36,73 @@ export const RULES = {
     id: "I, you, we, they, atau lebih dari satu → do / don't.",
   },
   base: {
-    en: "After do, does, don't, or doesn't → the verb has no -s.",
-    id: "Setelah do, does, don't, atau doesn't → kata kerja tanpa -s.",
+    en: "After do, does, don't, or doesn't → the verb has no -s/-es.",
+    id: "Setelah do, does, don't, atau doesn't → kata kerja tanpa -s/-es.",
+  },
+  am: {
+    en: "I → am (am not).",
+    id: "I → am (am not).",
+  },
+  is: {
+    en: "He, she, it, or one person → is (isn't).",
+    id: "He, she, it, atau satu orang → is (isn't).",
+  },
+  are: {
+    en: "You, we, they, or two or more people → are (aren't).",
+    id: "You, we, they, atau lebih dari satu → are (aren't).",
+  },
+  thereis: {
+    en: "One thing → There is (There isn't · Is there …?).",
+    id: "Satu benda → There is (There isn't · Is there …?).",
+  },
+  thereare: {
+    en: "Two or more things → There are (There aren't · Are there …?).",
+    id: "Dua benda atau lebih → There are (There aren't · Are there …?).",
   },
 };
 
-export const GROUP_OF = { s3: "s", plural: "s", has: "have", have: "have", does: "do", do: "do", base: "do" };
+export const GROUP_OF = { s3: "s", plural: "s", has: "have", have: "have", does: "do", do: "do", base: "do", am: "am", is: "is", are: "are", thereis: "one", thereare: "many" };
 
 export const GROUPS = {
-  s: { en: "verb + s", id: "kata kerja + s" },
+  s: { en: "verb + s/es", id: "kata kerja + s/es" },
   have: { en: "has / have", id: "has / have" },
   do: { en: "do / does", id: "do / does" },
+  am: { en: "I → am", id: "I → am" },
+  is: { en: "he / she / it → is", id: "he / she / it → is" },
+  are: { en: "you / we / they → are", id: "you / we / they → are" },
+  one: { en: "one thing → there is", id: "satu benda → there is" },
+  many: { en: "many things → there are", id: "banyak benda → there are" },
 };
 
 export const HINTS = {
   s: {
-    en: "Who is the subject? One person (he/she/it) → add -s. I/you/we/they → no -s.",
-    id: "Siapa subjeknya? Satu orang (he/she/it) → tambah -s. I/you/we/they → tanpa -s.",
+    en: "Who is the subject? One person (he/she/it) → add -s/-es. I/you/we/they → no -s/-es.",
+    id: "Siapa subjeknya? Satu orang (he/she/it) → tambah -s/-es. I/you/we/they → tanpa -s/-es.",
   },
   have: {
     en: "he / she / it → has · I / you / we / they → have",
     id: "he / she / it → has · I / you / we / they → have",
   },
   do: {
-    en: "he / she / it → does · I / you / we / they → do · after do/does → no -s",
-    id: "he / she / it → does · I / you / we / they → do · setelah do/does → tanpa -s",
+    en: "he / she / it → does · I / you / we / they → do · after do/does → no -s/-es",
+    id: "he / she / it → does · I / you / we / they → do · setelah do/does → tanpa -s/-es",
   },
+};
+
+// Short rule shown with the subject in item hints ("Rudi = he → verb + s/es").
+export const SHORT = {
+  s3: { en: "he / she / it → verb + s/es", id: "he / she / it → kata kerja + s/es" },
+  plural: { en: "I / you / we / they → no -s/-es", id: "I / you / we / they → tanpa -s/-es" },
+  has: { en: "he / she / it → has", id: "he / she / it → has" },
+  have: { en: "I / you / we / they → have", id: "I / you / we / they → have" },
+  does: { en: "he / she / it → does / doesn't", id: "he / she / it → does / doesn't" },
+  do: { en: "I / you / we / they → do / don't", id: "I / you / we / they → do / don't" },
+  base: { en: "after do / does / don't / doesn't → no -s/-es", id: "setelah do / does / don't / doesn't → tanpa -s/-es" },
+  am: { en: "I → am / am not", id: "I → am / am not" },
+  is: { en: "he / she / it → is / isn't", id: "he / she / it → is / isn't" },
+  are: { en: "you / we / they → are / aren't", id: "you / we / they → are / aren't" },
+  thereis: { en: "There is / There isn't", id: "There is / There isn't" },
+  thereare: { en: "There are / There aren't", id: "There are / There aren't" },
 };
 
 export const PRAISE = [
@@ -116,22 +157,22 @@ export const STORY = {
 
 // ---------- Stage 3: Find the pairs (noticing) ----------
 export const PAIRS = [
-  { t: "I get up at five o'clock.", subj: [0], verb: [1], note: { en: "I → get (no -s)", id: "I → get (tanpa -s)" } },
+  { t: "I get up at five o'clock.", subj: [0], verb: [1], note: { en: "I → get (no -s/-es)", id: "I → get (tanpa -s/-es)" } },
   { t: "My brother Rudi gets up at six.", subj: [0, 1, 2], verb: [3], note: { en: "Rudi = he → gets", id: "Rudi = he (dia) → gets" } },
   { t: "We have breakfast together.", subj: [0], verb: [1], note: { en: "We → have", id: "We (kami) → have" } },
   { t: "Rudi has rice porridge.", subj: [0], verb: [1], note: { en: "Rudi = he → has", id: "Rudi = he (dia) → has" } },
   { t: "My mother cooks in the kitchen.", subj: [0, 1], verb: [2], note: { en: "My mother = she → cooks", id: "My mother = she (dia) → cooks" } },
-  { t: "Rudi does not like vegetables.", subj: [0], verb: [1, 2, 3], note: { en: "Rudi = he → does not like (no -s on like)", id: "Rudi = he → does not like (like tanpa -s)" } },
+  { t: "Rudi does not like vegetables.", subj: [0], verb: [1, 2, 3], note: { en: "Rudi = he → does not like (like has no -s/-es)", id: "Rudi = he → does not like (like tanpa -s/-es)" } },
 ];
 
 // ---------- Stage 4: Guided practice ----------
 export const PRACTICE = [
-  { t: "Rudi ___ up at six.", o: ["get", "gets"], a: "gets", r: "s3" },
-  { t: "We ___ breakfast together.", o: ["have", "has"], a: "have", r: "have" },
-  { t: "Rudi ___ rice porridge with an egg.", o: ["have", "has"], a: "has", r: "has" },
-  { t: "My mother ___ in the kitchen.", o: ["cook", "cooks"], a: "cooks", r: "s3" },
-  { t: "___ Rudi like vegetables?", o: ["Do", "Does"], a: "Does", r: "does" },
-  { t: "I ___ a book after school.", o: ["read", "reads"], a: "read", r: "plural" },
+  { t: "Rudi ___ up at six.", who: "Rudi = he", o: ["get", "gets"], a: "gets", r: "s3" },
+  { t: "We ___ breakfast together.", who: "We", o: ["have", "has"], a: "have", r: "have" },
+  { t: "Rudi ___ rice porridge.", who: "Rudi = he", o: ["have", "has"], a: "has", r: "has" },
+  { t: "Sari ___ to school with her friends.", who: "Sari = she", o: ["go", "goes"], a: "goes", r: "s3" },
+  { t: "___ Rudi like vegetables?", who: "Rudi = he", o: ["Do", "Does"], a: "Does", r: "does" },
+  { t: "I ___ a book after school.", who: "I", o: ["read", "reads"], a: "read", r: "plural" },
 ];
 
 // ---------- Stage 5: Game rounds ----------
@@ -142,28 +183,28 @@ export const ROUNDS = [
     n: 1,
     kind: "choose",
     name: { en: "Choose", id: "Pilih" },
-    task: { en: "Choose the verb that matches the subject.", id: "Pilih kata kerja yang cocok dengan subjeknya." },
+    task: { en: "Find the subject. Then choose the verb.", id: "Cari subjeknya. Lalu pilih kata kerjanya." },
     variants: [
       {
         title: "A Busy Morning",
         items: [
-          { t: "Sari ___ up at five.", o: ["get", "gets"], a: "gets", r: "s3" },
-          { t: "Her parents ___ tea in the kitchen.", o: ["drink", "drinks"], a: "drink", r: "plural" },
-          { t: "Rudi ___ his teeth.", o: ["brush", "brushes"], a: "brushes", r: "s3" },
-          { t: "The children ___ breakfast together.", o: ["have", "has"], a: "have", r: "have" },
-          { t: "Their cat ___ a small bowl of milk.", o: ["have", "has"], a: "has", r: "has" },
-          { t: "Then Sari and Rudi ___ to school.", o: ["go", "goes"], a: "go", r: "plural" },
+          { t: "Sari ___ up at five.", who: "Sari = she", o: ["get", "gets"], a: "gets", r: "s3" },
+          { t: "Mother and Father ___ tea.", who: "Mother and Father = they", o: ["drink", "drinks"], a: "drink", r: "plural" },
+          { t: "Rudi ___ his teeth.", who: "Rudi = he", o: ["brush", "brushes"], a: "brushes", r: "s3" },
+          { t: "We ___ breakfast together.", who: "We", o: ["have", "has"], a: "have", r: "have" },
+          { t: "The cat ___ milk.", who: "The cat = it", o: ["have", "has"], a: "has", r: "has" },
+          { t: "Sari and Rudi ___ to school.", who: "Sari and Rudi = they", o: ["go", "goes"], a: "go", r: "plural" },
         ],
       },
       {
         title: "After School",
         items: [
-          { t: "Rudi ___ home at one o'clock.", o: ["come", "comes"], a: "comes", r: "s3" },
-          { t: "He ___ a big lunch.", o: ["have", "has"], a: "has", r: "has" },
-          { t: "Sari ___ her mother in the kitchen.", o: ["help", "helps"], a: "helps", r: "s3" },
-          { t: "Rudi's friends ___ football in the field.", o: ["play", "plays"], a: "play", r: "plural" },
-          { t: "I ___ a lot of homework today.", o: ["have", "has"], a: "have", r: "have" },
-          { t: "Our dog ___ under the tree.", o: ["sleep", "sleeps"], a: "sleeps", r: "s3" },
+          { t: "Rudi ___ home at one.", who: "Rudi = he", o: ["come", "comes"], a: "comes", r: "s3" },
+          { t: "He ___ a big lunch.", who: "He", o: ["have", "has"], a: "has", r: "has" },
+          { t: "Sari ___ her mother.", who: "Sari = she", o: ["help", "helps"], a: "helps", r: "s3" },
+          { t: "Rudi's friends ___ football.", who: "Rudi's friends = they", o: ["play", "plays"], a: "play", r: "plural" },
+          { t: "I ___ a lot of homework.", who: "I", o: ["have", "has"], a: "have", r: "have" },
+          { t: "Sari ___ TV in the evening.", who: "Sari = she", o: ["watch", "watches"], a: "watches", r: "s3" },
         ],
       },
     ],
@@ -177,23 +218,23 @@ export const ROUNDS = [
       {
         title: "Questions for Rudi",
         items: [
-          { t: "___ Rudi like vegetables?", o: ["Do", "Does"], a: "Does", r: "does" },
-          { t: "No, he ___ like carrots.", o: ["don't", "doesn't"], a: "doesn't", r: "does" },
-          { t: "___ you eat vegetables, Sari?", o: ["Do", "Does"], a: "Do", r: "do" },
-          { t: "Yes, I do. But I ___ like chili.", o: ["don't", "doesn't"], a: "don't", r: "do" },
+          { t: "___ Rudi like vegetables?", who: "Rudi = he", o: ["Do", "Does"], a: "Does", r: "does" },
+          { t: "No, he ___ like carrots.", who: "He", o: ["don't", "doesn't"], a: "doesn't", r: "does" },
+          { t: "___ you like vegetables, Sari?", who: "You", o: ["Do", "Does"], a: "Do", r: "do" },
+          { t: "I ___ like chili.", who: "I", o: ["don't", "doesn't"], a: "don't", r: "do" },
           { t: "Does Rudi ___ milk?", o: ["drink", "drinks"], a: "drink", r: "base" },
-          { t: "Yes, he ___. He loves milk!", o: ["do", "does"], a: "does", r: "does" },
+          { t: "Yes, he ___.", who: "He", o: ["do", "does"], a: "does", r: "does" },
         ],
       },
       {
         title: "Sunday Plans",
         items: [
-          { t: "___ Sari and Rudi go to school on Sunday?", o: ["Do", "Does"], a: "Do", r: "do" },
-          { t: "No, they ___.", o: ["don't", "doesn't"], a: "don't", r: "do" },
-          { t: "___ Rudi watch TV on Sunday?", o: ["Do", "Does"], a: "Does", r: "does" },
-          { t: "He ___ watch TV in the morning.", o: ["don't", "doesn't"], a: "doesn't", r: "does" },
+          { t: "___ Sari and Rudi go to school on Sunday?", who: "Sari and Rudi = they", o: ["Do", "Does"], a: "Do", r: "do" },
+          { t: "No, they ___.", who: "They", o: ["don't", "doesn't"], a: "don't", r: "do" },
+          { t: "___ Rudi watch TV on Sunday?", who: "Rudi = he", o: ["Do", "Does"], a: "Does", r: "does" },
+          { t: "He ___ watch TV in the morning.", who: "He", o: ["don't", "doesn't"], a: "doesn't", r: "does" },
           { t: "Does Sari ___ her room?", o: ["clean", "cleans"], a: "clean", r: "base" },
-          { t: "Yes, she ___ it every Sunday.", o: ["clean", "cleans"], a: "cleans", r: "s3" },
+          { t: "She ___ her room every Sunday.", who: "She", o: ["clean", "cleans"], a: "cleans", r: "s3" },
         ],
       },
     ],
@@ -207,23 +248,23 @@ export const ROUNDS = [
       {
         title: "Rudi and Sari",
         items: [
-          { t: "Rudi play football after school.", w: 1, o: ["play", "plays"], a: "plays", r: "s3" },
-          { t: "His friends plays with him.", w: 2, o: ["play", "plays"], a: "play", r: "plural" },
-          { t: "Sari have a new book.", w: 1, o: ["have", "has"], a: "has", r: "has" },
-          { t: "She take it to school every day.", w: 1, o: ["take", "takes"], a: "takes", r: "s3" },
-          { t: "Rudi don't read books.", w: 1, o: ["don't", "doesn't"], a: "doesn't", r: "does" },
+          { t: "Rudi play football after school.", who: "Rudi = he", w: 1, o: ["play", "plays"], a: "plays", r: "s3" },
+          { t: "His friends plays with him.", who: "His friends = they", w: 2, o: ["play", "plays"], a: "play", r: "plural" },
+          { t: "Sari have a new book.", who: "Sari = she", w: 1, o: ["have", "has"], a: "has", r: "has" },
+          { t: "She go to school every day.", who: "She", w: 1, o: ["go", "goes"], a: "goes", r: "s3" },
+          { t: "Rudi don't read comics.", who: "Rudi = he", w: 1, o: ["don't", "doesn't"], a: "doesn't", r: "does" },
           { t: "Does he likes comics?", w: 2, o: ["like", "likes"], a: "like", r: "base" },
         ],
       },
       {
         title: "Mother's Kitchen",
         items: [
-          { t: "My mother cook every morning.", w: 2, o: ["cook", "cooks"], a: "cooks", r: "s3" },
-          { t: "She have a big pot.", w: 1, o: ["have", "has"], a: "has", r: "has" },
-          { t: "Sari and I helps her.", w: 3, o: ["help", "helps"], a: "help", r: "plural" },
-          { t: "Rudi do the dishes.", w: 1, o: ["do", "does"], a: "does", r: "does" },
-          { t: "Do Mother like spicy food?", w: 0, o: ["Do", "Does"], a: "Does", r: "does" },
-          { t: "We doesn't eat chili.", w: 1, o: ["don't", "doesn't"], a: "don't", r: "do" },
+          { t: "My mother cook every morning.", who: "My mother = she", w: 2, o: ["cook", "cooks"], a: "cooks", r: "s3" },
+          { t: "She have a big pot.", who: "She", w: 1, o: ["have", "has"], a: "has", r: "has" },
+          { t: "Sari and I helps her.", who: "Sari and I = we", w: 3, o: ["help", "helps"], a: "help", r: "plural" },
+          { t: "Rudi do the dishes.", who: "Rudi = he", w: 1, o: ["do", "does"], a: "does", r: "does" },
+          { t: "Do Mother like chili?", who: "Mother = she", w: 0, o: ["Do", "Does"], a: "Does", r: "does" },
+          { t: "We doesn't eat chili.", who: "We", w: 1, o: ["don't", "doesn't"], a: "don't", r: "do" },
         ],
       },
     ],
@@ -231,7 +272,7 @@ export const ROUNDS = [
 ];
 
 // ---------- Stage 6: Independent check (no hints) ----------
-// 10 items from a new short text: 4 verb + s, 3 has/have, 3 do/does.
+// 10 items from a new short text: 4 verb + s/es, 3 has/have, 3 do/does.
 export const CHECK = {
   title: "Sunday at Grandma's House",
   items: [
@@ -252,7 +293,7 @@ export const CHECK = {
 export const STAGES = [
   { id: "words", n: 1, img: "vocab/get_up.webp", guide: "sari",
     name: { en: "Words", id: "Kosakata" },
-    desc: { en: "Meet 8 daily-routine words, then play Picture Match.", id: "Kenali 8 kata kegiatan sehari-hari, lalu main Cocokkan Gambar." } },
+    desc: { en: "Meet 8 new words, then play Picture Match.", id: "Kenali 8 kata baru, lalu main Cocokkan Gambar." } },
   { id: "read", n: 2, img: "vocab/read_book.webp", guide: "aisyah",
     name: { en: "Read", id: "Membaca" },
     desc: { en: "Read and listen to \"Sari's Day\". Then answer: who?", id: "Baca dan dengarkan \"Sari's Day\". Lalu jawab: siapa?" } },
@@ -261,7 +302,7 @@ export const STAGES = [
     desc: { en: "Find the subject and its verb in each sentence.", id: "Temukan subjek dan kata kerjanya di setiap kalimat." } },
   { id: "practice", n: 4, img: "vocab/do_homework.webp", guide: "sari",
     name: { en: "Practice", id: "Latihan" },
-    desc: { en: "Choose the right verb. You can use a hint.", id: "Pilih kata kerja yang benar. Boleh pakai petunjuk." } },
+    desc: { en: "Find the subject, then choose the verb. You can use a hint.", id: "Cari subjeknya, lalu pilih kata kerjanya. Boleh pakai petunjuk." } },
   { id: "rounds", n: 5, img: "vocab/play_with_friends.webp", guide: "rudi",
     name: { en: "Game rounds", id: "Ronde permainan" },
     desc: { en: "Three short rounds: choose, questions and NOT, fix it.", id: "Tiga ronde pendek: pilih, kalimat tanya dan NOT, perbaiki." } },
@@ -276,10 +317,10 @@ export const STAGES = [
 // ---------- The six worlds (x / y = position on the world map, in %) ----------
 // Only World 3 is playable in this version. Texts get longer from world to world.
 export const WORLDS = [
-  { n: 1, short: "Me", x: 51.8, y: 77.1, open: false, name: "Hello, This Is Me", id: "Halo, Ini Aku",
+  { n: 1, short: "Me", x: 51.8, y: 77.1, open: true, name: "Hello, This Is Me", id: "Halo, Ini Aku",
     topic: { en: "Me, my family, my friends", id: "Aku, keluargaku, temanku" },
     reading: { en: "Words with pictures → 1 sentence → 2–3 sentences", id: "Kata bergambar → 1 kalimat → 2–3 kalimat" } },
-  { n: 2, short: "School", x: 56.6, y: 63.5, open: false, name: "My School World", id: "Dunia Sekolahku",
+  { n: 2, short: "School", x: 56.6, y: 63.5, open: true, name: "My School World", id: "Dunia Sekolahku",
     topic: { en: "Classroom, school, things I like", id: "Kelas, sekolah, hal yang kusukai" },
     reading: { en: "Short descriptions (3–6 sentences)", id: "Deskripsi pendek (3–6 kalimat)" } },
   { n: 3, short: "My Day", x: 51.8, y: 47.5, open: true, name: "My Day", id: "Hariku",

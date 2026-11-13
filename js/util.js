@@ -2,12 +2,18 @@
 
 const KEY = "readventure-progress-v1";
 
-export const DEFAULT_PROGRESS = {
+export const freshWorld = () => ({
   done: {},          // stageId -> true
   plays: { 1: 0, 2: 0, 3: 0 }, // how many times each round was played (picks the story variant)
   best: null,        // best check score (0-10)
   last: null,        // last check result summary
-  showID: true,      // show Indonesian support lines
+});
+
+export const DEFAULT_PROGRESS = {
+  worlds: { 1: freshWorld(), 2: freshWorld(), 3: freshWorld() }, // progress per world
+  world: 3,          // the world the learner opened last
+  showID: false,     // Indonesian support lines: off until the learner taps ID
+  v: 3,              // progress format version
   sound: true,       // read-aloud on
   unlockAll: false,  // teacher demo: open every stage
   bag: {},           // My Word Bag: word -> { m: meaning, img }
@@ -18,7 +24,16 @@ export function loadProgress() {
     const raw = localStorage.getItem(KEY);
     if (!raw) return structuredClone(DEFAULT_PROGRESS);
     const p = JSON.parse(raw);
-    return { ...structuredClone(DEFAULT_PROGRESS), ...p, plays: { ...DEFAULT_PROGRESS.plays, ...(p.plays || {}) }, bag: { ...(p.bag || {}) } };
+    if (!p.v || p.v < 2) p.showID = false; // v2: Indonesian is shown only on request
+    if (!p.worlds) { // v3: progress per world (old progress belongs to World 3)
+      p.worlds = { 3: { done: p.done || {}, plays: { 1: 0, 2: 0, 3: 0, ...(p.plays || {}) }, best: p.best ?? null, last: p.last ?? null } };
+      delete p.done; delete p.plays; delete p.best; delete p.last;
+    }
+    p.v = 3;
+    const d = structuredClone(DEFAULT_PROGRESS);
+    const worlds = { ...d.worlds };
+    for (const [k, w] of Object.entries(p.worlds)) worlds[k] = { ...freshWorld(), ...w, plays: { 1: 0, 2: 0, 3: 0, ...(w.plays || {}) } };
+    return { ...d, ...p, worlds, bag: { ...(p.bag || {}) } };
   } catch {
     return structuredClone(DEFAULT_PROGRESS);
   }
